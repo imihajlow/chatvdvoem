@@ -1,0 +1,115 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+</head>
+<body>
+<textarea id="input" rows="10" cols="80"></textarea>
+<input type="button" id="convert" value="convert" onclick="convert()" />
+<textarea id="output" rows="10" cols="80"></textarea>
+<script type='text/javascript'>
+function convert() {
+    var input = $("#input").val();
+    var data = JSON.parse(input);
+    var result = [];
+    for (var i = 0; i < data.length; ++i) {
+        result = result.concat(processConversation(data[i]));
+    }
+    result = sortAndMerge(result);
+    $("#output").val(JSON.stringify(result));
+}
+
+function sortAndMerge(data) {
+    data.sort(function (a,b) {
+        if (a.i < b.i) {
+            return -1;
+        } else if (a.i > b.i) {
+            return 1;
+        } else {
+            return 0;
+        }
+    });
+    var result = [];
+    var current = data[0];
+    for (var i = 1; i < data.length; ++i) {
+        if (current.i === data[i].i) {
+            current.o = current.o.concat(data[i].o);
+        } else {
+            result[result.length] = current;
+            current = data[i];
+        }
+    }
+    result[result.length] = current;
+    return result;
+}
+
+function processConversation(cv) {
+    var inputs = [];
+    var outputs = [];
+    var result = [];
+    var state = "begin"; // i, o
+
+    function appendResult() {
+        for (var i = 0; i < inputs.length; ++i) {
+            var input = inputs[i].replace(/[^\w а-яё\-,.]/ig, "").toLocaleLowerCase();
+            if (input.length > 0) {
+                result[result.length] = { 'i': input, 'o': outputs };
+            }
+        }
+    }
+
+    for (var i = 0; i < cv.length; ++i) {
+        var entry = cv[i];
+        switch (state) {
+        case 'begin':
+            switch (entry.t) {
+            case 's':
+                break;
+            case 'i':
+                inputs = [entry.m];
+                state = 'i';
+                break;
+            case 'o':
+                break;
+            }
+            break;
+        case 'i':
+            switch (entry.t) {
+            case 's':
+                break;
+            case 'i':
+                inputs[inputs.length] = entry.m;
+                break;
+            case 'o':
+                outputs = [entry.m];
+                state = 'o';
+                break;
+            }
+            break
+        case 'o':
+            switch (entry.t) {
+            case 's':
+                break;
+            case 'i':
+                appendResult();
+                inputs = [entry.m];
+                state = 'i';
+                break;
+            case 'o':
+                outputs[outputs.length] = entry.m;
+                break;
+            }
+            break;
+        default:
+            console.log("wrong state", state);
+            break;
+        }
+    }
+    if (state === 'o') {
+        appendResult();
+    }
+    return result;
+}
+</script>
+</body>
+</html>
